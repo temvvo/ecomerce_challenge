@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -72,14 +71,19 @@ public class ProductController {
 
     public ResponseEntity<ProductApiModel> putProduct(
             @Parameter(name = "id", description = "Unique product resource identifier", required = true, in = ParameterIn.PATH) @PathVariable("id") Long id,
-            @Parameter(name = "Product", description = "Payload containing the product.") @Valid @RequestBody(required = false) Optional<ProductApiModel> productApiModel
+            @Parameter(name = "Product", description = "Payload containing the product.") @Valid @RequestBody(required = true) ProductApiModel productApiModel
     ) throws EcommerceException {
-        Product product = service.update(id, productApiModel.map(mapper::map)
-                .orElseThrow(() -> new EcommerceException(417, "Payment rule can't be null")));
+        validateProductRequest(productApiModel);
+        Product product = service.update(id, mapper.map(productApiModel));
 
         return new ResponseEntity<>(mapper.map(product), HttpStatus.OK);
     }
 
+    private static void validateProductRequest(ProductApiModel productApiModel) throws EcommerceException {
+        if(productApiModel.getCurrency() == null || productApiModel.getPrice() == null || productApiModel.getBrandName() == null || productApiModel.getDescription() == null) {
+            throw new EcommerceException(417, "Product attributes can´t be null");
+        }
+    }
 
 
     @PostMapping(
@@ -88,11 +92,11 @@ public class ProductController {
     )
 
     public ResponseEntity<ProductApiModel> postProduct(
-            @Parameter(name = "Product", description = "Payload containing the product product.") @Valid @RequestBody(required = false) Optional<ProductApiModel> product
+            @Parameter(name = "Product", description = "Payload containing the product product.") @Valid @RequestBody(required = true) ProductApiModel product
     ) throws EcommerceException {
+        validateProductRequest(product);
 
-        return new ResponseEntity<>(mapper.map(service.save(product.map(mapper::map)
-                .orElseThrow(() -> new EcommerceException(417, "Product can't be null")))), HttpStatus.CREATED);
+        return new ResponseEntity<>(mapper.map(service.save(mapper.map(product))), HttpStatus.CREATED);
     }
 
 }
